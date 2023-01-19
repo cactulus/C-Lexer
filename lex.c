@@ -53,6 +53,10 @@ enum token_keyword {
 	TK_WHILE
 };
 
+/* note: for single char operators, the ascii code is used.
+Care to not overlap char codes for single char operators
+IMPORTANT: DON'T CHANGE ORDER OF THESE!
+*/
 enum token_type {
 	T_ERROR = 0,
 	T_END_OF_FILE,
@@ -60,9 +64,38 @@ enum token_type {
 	T_INT_LITERAL,
 	T_FLOAT_LITERAL,
 	T_SINGLE_CHAR_OPERATOR,
+	T_TWO_CHAR_OPERATOR,
 	T_KEYWORD,
 	T_CHAR,
-	T_STRING
+	T_STRING,
+
+	/* two char operators */
+	T_EQ_EQ,
+	T_AND_AND,
+	T_OR_OR,
+	T_LSH,
+	T_RSH,
+
+	T_ARROW,
+	T_PLUS_PLUS,
+	T_MINUS_MINUS,
+
+	T_PLUS_EQ,
+	T_MINUS_EQ,
+	T_STAR_EQ,
+	T_SLASH_EQ,
+	T_PERCENT_EQ,
+	T_XOR_EQ,
+	T_TILDE_EQ,
+	T_AND_EQ,
+	T_OR_EQ,
+	T_NOT_EQ,
+	T_GREATER_EQ,
+	T_LESS_EQ,
+
+	/* three char operators*/
+	T_LSH_EQ,
+	T_RSH_EQ
 };
 
 enum states {
@@ -78,6 +111,11 @@ enum states {
 	S_STRING = 9,
 	S_CHAR_LAST = 10,
 	S_STRING_LAST = 11,
+	S_EQ = 12,
+	S_EQ_EQ = 13,
+	S_EQUABLE = 14,
+	/* any char, folowed by = */
+	S_EQ_POST = 15,
 };
 
 enum equivalence_classes {
@@ -122,10 +160,11 @@ const u8 equivalence_class[] = {
 	EC_ALPHA, EC_ALPHA, EC_ALPHA, EC_SC_OP, EC_OR, EC_SC_OP, EC_EQUABLE, 0,
 };
 
+
 /* transition table from [state][equivalence class] -> new state */
-const u8 transitions[12][20] = {
+const u8 transitions[16][20] = {
 	/* initial */
-	{ S_FINAL, S_SPACE, S_SPACE, S_ID, S_INT, S_ERROR, S_SC_OP, -1, -1, -1,
+	{ S_FINAL, S_SPACE, S_SPACE, S_ID, S_INT, S_ERROR, S_SC_OP, S_EQUABLE, S_EQ, -1,
 	  -1, -1, -1, -1, -1, -1, -1, -1, S_CHAR, S_STRING},
 	/* final */
 	{ S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR,
@@ -134,7 +173,7 @@ const u8 transitions[12][20] = {
 	{ S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR,
 	  S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR},
 	/* space */
-	{ S_FINAL, S_SPACE, S_SPACE, S_ID, S_INT, S_ERROR, S_SC_OP,  S_FINAL, S_FINAL, S_FINAL,
+	{ S_FINAL, S_SPACE, S_SPACE, S_ID, S_INT, S_ERROR, S_SC_OP,  S_EQUABLE, S_EQ, S_FINAL,
 	  S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_CHAR, S_STRING},
 	/* id */
 	{ S_FINAL, S_FINAL, S_FINAL, S_ID, S_ID, S_ERROR, S_FINAL, S_FINAL, S_FINAL, S_FINAL,
@@ -160,24 +199,28 @@ const u8 transitions[12][20] = {
 	/* string last */
 	{ S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL,
 	  S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL},
+	/* equals */
+	{ S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_EQ_EQ, S_FINAL,
+	S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL},
+	/* equals equals */
+	{ S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL,
+	  S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL},
+	/* equable */
+	{ S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_EQ_POST, S_FINAL,
+		S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL},
+	/* post equals */
+	{ S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL,
+	  S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL},
 };
 
 const u8 in_token[] = {
-	0,
-	0,
-	1,
-	0,
-	1,
-	1,
-	1,
-	1,
-	1,
-	1,
-	1,
-	1
+	0, 0, 1, 0,
+	1, 1, 1, 1,
+	1, 1, 1, 1,
+	1, 1, 1, 1
 };
 
-const state_to_token_type[] = {
+const u8 state_to_token_type[] = {
 	T_END_OF_FILE,
 	T_END_OF_FILE,
 	T_ERROR,
@@ -190,6 +233,10 @@ const state_to_token_type[] = {
 	T_STRING,
 	T_CHAR,
 	T_STRING,
+	T_SINGLE_CHAR_OPERATOR,
+	T_EQ_EQ,
+	T_SINGLE_CHAR_OPERATOR,
+	T_TWO_CHAR_OPERATOR
 };
 
 const char *keywords[] = {
@@ -205,6 +252,13 @@ const char *keywords[] = {
 	"while"
 };
 const int KEYWORD_COUNT = 32;
+
+const char *two_char_operators[] = {
+	"==", "&&", "||", "<<", ">>", "->", "++", "--",
+	"+=", "-=", "*=", "/=", "%=", "^=", "~=", "&=", "|=",
+	"!=", ">=", "<="
+};
+const int TWO_CHAR_OPERATOR_COUNT = 20;
 
 Token lex(LexerContext *ctx) {
 	char *p = ctx->current;
@@ -256,6 +310,15 @@ Token lex(LexerContext *ctx) {
 	case T_SINGLE_CHAR_OPERATOR: {
 		tk.type = (u8) *token_start;
 	} break;
+	case T_TWO_CHAR_OPERATOR: {
+		for (s32 i = 0; i < TWO_CHAR_OPERATOR_COUNT; ++i) {
+			const char *op = two_char_operators[i];
+			if (op[0] == *token_start && op[1] == *(token_start + 1)) {
+				tk.type = T_EQ_EQ + i;
+				break;
+			}
+		}
+	}
 	case T_CHAR: {
 		tk.int_value = *(token_start + 1);
 	} break;
@@ -295,9 +358,32 @@ const char *token_type_to_str(u8 token_type) {
 	case T_INT_LITERAL: return "integer";
 	case T_FLOAT_LITERAL: return "float";
 	case T_SINGLE_CHAR_OPERATOR: return "single char operator";
+	case T_TWO_CHAR_OPERATOR: return "two char operator";
 	case T_KEYWORD: return "keyword";
 	case T_CHAR: return "char";
 	case T_STRING: return "string";
+	case T_EQ_EQ: return "equals equals";
+	case T_AND_AND: return "and and";
+	case T_OR_OR: return "or or";
+	case T_LSH: return "left shift";
+	case T_RSH: return "right shift";
+	case T_ARROW: return "arrow";
+	case T_PLUS_PLUS: return "plus plus";
+	case T_MINUS_MINUS: return "minus minus";
+	case T_PLUS_EQ: return "plus equals";
+	case T_MINUS_EQ: return "minus equals";
+	case T_STAR_EQ: return "star equals";
+	case T_SLASH_EQ: return "slash equals";
+	case T_PERCENT_EQ: return "percent equals";
+	case T_XOR_EQ: return "xor equals";
+	case T_TILDE_EQ: return "tilde equals";
+	case T_AND_EQ: return "and equals";
+	case T_OR_EQ: return "or equals";
+	case T_NOT_EQ: return "not equals";
+	case T_GREATER_EQ: return "greater equals";
+	case T_LESS_EQ: return "less equals";
+	case T_LSH_EQ: return "left shift equals";
+	case T_RSH_EQ: return "right shift equals";
 	default: "";
 	}
 
@@ -305,7 +391,7 @@ const char *token_type_to_str(u8 token_type) {
 }
 
 s32 main() {
-	const char *input = "int main() {\n\tprintf(\"Hello World\");\n\treturn 0;\n}";
+	const char *input = "= == ^= ^ =";
 	
 	LexerContext ctx;
 	ctx.current = input;
@@ -327,10 +413,14 @@ s32 main() {
 			printf("%s: %d\n", token_type_to_str(token.type), token.keyword);
 			break;
 		case T_CHAR:
-			printf("%s: %c\n", token_type_to_str(token.type), token.int_value);
+			printf("%s: '%c'\n", token_type_to_str(token.type), token.int_value);
 			break;
 		default:
-			printf("'%c'\n", token.type);
+			if (token.type >= T_EQ_EQ && token.type <= T_RSH_EQ) {
+				printf("%s\n", token_type_to_str(token.type));
+			} else {
+				printf("%c\n", token.type);
+			}
 			break;
 		}
 	}
