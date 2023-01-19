@@ -100,22 +100,25 @@ enum token_type {
 
 enum states {
 	S_INITIAL = 0,
-	S_FINAL = 1,
-	S_ERROR = 2,
-	S_SPACE = 3,
-	S_ID = 4,
-	S_INT = 5,
-	S_FLOAT = 6,
-	S_SC_OP = 7,
-	S_CHAR = 8,
-	S_STRING = 9,
-	S_CHAR_LAST = 10,
-	S_STRING_LAST = 11,
-	S_EQ = 12,
-	S_EQ_EQ = 13,
-	S_EQUABLE = 14,
-	/* any char, folowed by = */
-	S_EQ_POST = 15,
+	S_SPACE = 1,
+	S_ID = 2,
+	S_INT = 3,
+	S_FLOAT = 4,
+	S_SC_OP = 5,
+	S_CHAR = 6,
+	S_STRING = 7,
+	S_EQ = 8,
+	S_EQUABLE = 9,
+
+	S_FINAL_ID,
+	S_END_OF_FILE,
+	S_ERROR,
+	S_FINAL_INT,
+	S_FINAL_FLOAT,
+	S_FINAL_STRING,
+	S_FINAL_CHAR,
+	S_FINAL_SC,
+	S_FINAL_TC
 };
 
 enum equivalence_classes {
@@ -162,81 +165,59 @@ const u8 equivalence_class[] = {
 
 
 /* transition table from [state][equivalence class] -> new state */
-const u8 transitions[16][20] = {
+const u8 transitions[10][20] = {
 	/* initial */
-	{ S_FINAL, S_SPACE, S_SPACE, S_ID, S_INT, S_ERROR, S_SC_OP, S_EQUABLE, S_EQ, -1,
+	{ S_END_OF_FILE, S_SPACE, S_SPACE, S_ID, S_INT, S_ERROR, S_SC_OP, S_EQUABLE, S_EQ, -1,
 	  -1, -1, -1, -1, -1, -1, -1, -1, S_CHAR, S_STRING},
-	/* final */
-	{ S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR,
-	  S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR},
-	/* error */
-	{ S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR,
-	  S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR, S_ERROR},
 	/* space */
-	{ S_FINAL, S_SPACE, S_SPACE, S_ID, S_INT, S_ERROR, S_SC_OP,  S_EQUABLE, S_EQ, S_FINAL,
-	  S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_CHAR, S_STRING},
+	{ S_END_OF_FILE, S_SPACE, S_SPACE, S_ID, S_INT, S_ERROR, S_SC_OP,  S_EQUABLE, S_EQ, -1,
+	  -1, -1, -1, -1, -1, -1, -1, -1, S_CHAR, S_STRING},
 	/* id */
-	{ S_FINAL, S_FINAL, S_FINAL, S_ID, S_ID, S_ERROR, S_FINAL, S_FINAL, S_FINAL, S_FINAL,
-	  S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL},
+	{ S_FINAL_ID, S_FINAL_ID, S_FINAL_ID, S_ID, S_ID, S_ERROR, S_FINAL_ID, S_FINAL_ID, S_FINAL_ID, S_FINAL_ID,
+	  S_FINAL_ID, S_FINAL_ID, S_FINAL_ID, S_FINAL_ID, S_FINAL_ID, S_FINAL_ID, S_FINAL_ID, S_FINAL_ID, S_FINAL_ID, S_FINAL_ID},
 	/* int */
-	{ S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_INT, S_FLOAT, S_FINAL, S_FINAL, S_FINAL, S_FINAL,
-	  S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL},
+	{ S_FINAL_INT, S_FINAL_INT, S_FINAL_INT, S_FINAL_INT, S_INT, S_FLOAT, S_FINAL_INT, S_FINAL_INT, S_FINAL_INT, S_FINAL_INT,
+	  S_FINAL_INT, S_FINAL_INT, S_FINAL_INT, S_FINAL_INT, S_FINAL_INT, S_FINAL_INT, S_FINAL_INT, S_FINAL_INT, S_FINAL_INT, S_FINAL_INT},
 	/* float */
-	{ S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FLOAT, S_ERROR, S_FINAL, S_FINAL, S_FINAL, S_FINAL,
-	  S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL},
+	{ S_FINAL_FLOAT, S_FINAL_FLOAT, S_FINAL_FLOAT, S_FINAL_FLOAT, S_FLOAT,
+	  S_ERROR, S_FINAL_FLOAT, S_FINAL_FLOAT, S_FINAL_FLOAT, S_FINAL_FLOAT,
+	  S_FINAL_FLOAT, S_FINAL_FLOAT, S_FINAL_FLOAT, S_FINAL_FLOAT, S_FINAL_FLOAT,
+	  S_FINAL_FLOAT, S_FINAL_FLOAT, S_FINAL_FLOAT, S_FINAL_FLOAT, S_FINAL_FLOAT},
 	/* single char operator */
-	{ S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL,
-	  S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL},
+	{ S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC,
+	  S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC},
 	  /* char */
 	{ S_ERROR, S_CHAR, S_ERROR, S_CHAR, S_CHAR, S_CHAR, S_CHAR, S_CHAR, S_CHAR, S_CHAR,
-	  S_CHAR, S_CHAR, S_CHAR, S_CHAR, S_CHAR, S_CHAR, S_CHAR, S_CHAR, S_CHAR_LAST, S_CHAR},
+	  S_CHAR, S_CHAR, S_CHAR, S_CHAR, S_CHAR, S_CHAR, S_CHAR, S_CHAR, S_FINAL_CHAR, S_CHAR},
 	/* string */
 	{ S_ERROR, S_STRING, S_ERROR, S_STRING, S_STRING, S_STRING, S_STRING, S_STRING, S_STRING, S_STRING,
-	  S_STRING, S_STRING, S_STRING, S_STRING, S_STRING, S_STRING, S_STRING, S_STRING, S_STRING, S_STRING_LAST},
-	/* char last */
-	{ S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL,
-	  S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL},
-	/* string last */
-	{ S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL,
-	  S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL},
+	  S_STRING, S_STRING, S_STRING, S_STRING, S_STRING, S_STRING, S_STRING, S_STRING, S_STRING, S_FINAL_STRING},
 	/* equals */
-	{ S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_EQ_EQ, S_FINAL,
-	S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL},
-	/* equals equals */
-	{ S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL,
-	  S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL},
+	{ S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_TC, S_FINAL_SC,
+	  S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC},
 	/* equable */
-	{ S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_EQ_POST, S_FINAL,
-		S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL},
-	/* post equals */
-	{ S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL,
-	  S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL, S_FINAL},
+	{ S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_TC, S_FINAL_SC,
+	  S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC, S_FINAL_SC},
 };
 
 const u8 in_token[] = {
-	0, 0, 1, 0,
+	0, 0, 1, 1,
 	1, 1, 1, 1,
-	1, 1, 1, 1,
-	1, 1, 1, 1
+	1, 1, 0, 0,
+	0, 0, 0, 0,
+	0, 0, 0,
 };
 
 const u8 state_to_token_type[] = {
-	T_END_OF_FILE,
+	T_IDENTIFIER,
 	T_END_OF_FILE,
 	T_ERROR,
-	T_END_OF_FILE,
-	T_IDENTIFIER,
 	T_INT_LITERAL,
 	T_FLOAT_LITERAL,
-	T_SINGLE_CHAR_OPERATOR,
-	T_CHAR,
 	T_STRING,
 	T_CHAR,
-	T_STRING,
 	T_SINGLE_CHAR_OPERATOR,
-	T_EQ_EQ,
-	T_SINGLE_CHAR_OPERATOR,
-	T_TWO_CHAR_OPERATOR
+	T_TWO_CHAR_OPERATOR,
 };
 
 const char *keywords[] = {
@@ -266,19 +247,17 @@ Token lex(LexerContext *ctx) {
 	u8 state = S_INITIAL;
 	size_t token_len = 0;
 
-	u8 last_state = state;
 	do {
 		u8 c = *p++;
 		u8 eq_cls = equivalence_class[c];
-		last_state = state;
 		state = transitions[state][eq_cls];
 		token_len += in_token[state];
-	} while (state != S_FINAL);
+	} while (state < S_FINAL_ID);
 
 	char *token_start = p - token_len - 1;
 
 	Token tk = {0};
-	tk.type = state_to_token_type[last_state];
+	tk.type = state_to_token_type[state - S_FINAL_ID];
 
 	switch (tk.type) {
 	case T_INT_LITERAL: {
@@ -321,9 +300,13 @@ Token lex(LexerContext *ctx) {
 	}
 	case T_CHAR: {
 		tk.int_value = *(token_start + 1);
+		/* skip closing ' */
+		p++;
 	} break;
 	case T_STRING: {
-		tk.lexeme = cstring(token_start + 1, token_len - 2);
+		tk.lexeme = cstring(token_start + 1, token_len - 1);
+		/* skip closing " */
+		p++;
 	} break;
 	case T_IDENTIFIER: {
 		CString lexeme = cstring(token_start, token_len);
@@ -391,7 +374,7 @@ const char *token_type_to_str(u8 token_type) {
 }
 
 s32 main() {
-	const char *input = "= == ^= ^ =";
+	const char *input = "int main() {\n\tprintf(\"%d\", 512);\n\treturn 0;\n}";
 	
 	LexerContext ctx;
 	ctx.current = input;
@@ -416,7 +399,7 @@ s32 main() {
 			printf("%s: '%c'\n", token_type_to_str(token.type), token.int_value);
 			break;
 		default:
-			if (token.type >= T_EQ_EQ && token.type <= T_RSH_EQ) {
+			if ((token.type >= T_EQ_EQ && token.type <= T_RSH_EQ) || token.type == T_ERROR ) {
 				printf("%s\n", token_type_to_str(token.type));
 			} else {
 				printf("%c\n", token.type);
